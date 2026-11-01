@@ -10,6 +10,7 @@ npx expo install \
   react-native-maps \
   react-native-safe-area-context \
   expo-location \
+  expo-task-manager \
   expo-speech \
   expo-keep-awake \
   expo-status-bar \

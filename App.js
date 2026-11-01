@@ -2,7 +2,7 @@
 // Web uygulamasıyla aynı veritabanını ve aynı doluluk/tahmin mantığını kullanır.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator, Keyboard, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput,
+  ActivityIndicator, Alert, AppState, Keyboard, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput,
   View, useColorScheme,
 } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
@@ -17,6 +17,7 @@ import { geocode, loadSegments, loadSpecialDays, sendFeedback } from "./src/api"
 import { bearing, dist, fmtDist, lineInfo, segDist, segMid, segPts, toLL } from "./src/geo";
 import { capacityText, hasData, ruleText, statusOf } from "./src/status";
 import { fetchRoute, instr, rotOf, sayDist } from "./src/nav";
+import { isAutoOn, startAuto, stopAuto } from "./src/autopark";
 
 const KIZILAY = [39.9208, 32.8541];
 const RADIUS = 900;
@@ -54,6 +55,7 @@ function Main() {
   const [navUI, setNavUI] = useState(null);
   const [voice, setVoice] = useState(true);
   const [sheetMin, setSheetMin] = useState(false);
+  const [auto, setAuto] = useState(false);
 
   const navRef = useRef(null);
   const watchRef = useRef(null);
@@ -83,11 +85,15 @@ function Main() {
   useEffect(() => {
     refresh();
     const t = setInterval(refresh, 60000);
-    AsyncStorage.getItem("pp_car").then((v) => {
-      try { const x = JSON.parse(v || "null"); if (x && Date.now() - x.at < 12 * 3600e3) setCar(x); } catch (e) {}
+    // Araç yeri arka planda otomatik kaydedilmiş olabilir: açılışta ve uygulamaya her dönüşte oku
+    const readCar = () => AsyncStorage.getItem("pp_car").then((v) => {
+      try { const x = JSON.parse(v || "null"); setCar(x && Date.now() - x.at < 12 * 3600e3 ? x : null); } catch (e) {}
     });
+    readCar();
+    isAutoOn().then(setAuto);
+    const sub = AppState.addEventListener("change", (st) => { if (st === "active") { readCar(); refresh(); } });
     AsyncStorage.getItem("pp_voice").then((v) => setVoice(v !== "0"));
-    return () => clearInterval(t);
+    return () => { clearInterval(t); sub.remove(); };
   }, [refresh]);
 
   const nearby = useMemo(() => {
@@ -336,6 +342,27 @@ function Main() {
 
   const clearCar = useCallback(() => { setCar(null); AsyncStorage.removeItem("pp_car"); say("Araç kaydı kaldırıldı"); }, [say]);
 
+  const toggleAuto = useCallback(() => {
+    if (auto) {
+      Alert.alert("Otomatik park algılama", "Kapatılsın mı?", [
+        { text: "Vazgeç", style: "cancel" },
+        { text: "Kapat", style: "destructive", onPress: async () => { await stopAuto(); setAuto(false); say("Otomatik algılama kapatıldı"); } },
+      ]);
+      return;
+    }
+    Alert.alert(
+      "Otomatik park algılama",
+      "Park ettiğinde aracının yeri kendiliğinden kaydedilir. Park yerinden ayrıldığında o sokakta yer açıldığı diğer sürücülere bildirilir.\n\nKonumun saklanmaz; yalnızca sokak ve saat kaydedilir. Bir sonraki adımda konum iznini \"Her Zaman\" olarak vermen gerekir.",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        { text: "Aç", onPress: async () => {
+          try { await startAuto(); setAuto(true); say("Otomatik algılama açık"); }
+          catch (e) { say(e.message || String(e), true); }
+        } },
+      ]
+    );
+  }, [auto, say]);
+
   const openExternal = useCallback((s) => {
     const [la, lo] = segMid(s);
     const url = Platform.OS === "ios" ? `http://maps.apple.com/?daddr=${la},${lo}&dirflg=d` : `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${la},${lo}`;
@@ -405,11 +432,16 @@ function Main() {
         <View style={st.top}>
           <View style={st.brandRow}>
             <View style={st.logo}><View style={st.logoP}><Text style={st.logoPText}>P</Text></View><Text style={st.logoText}>PARKPUSULA</Text></View>
-            {car && (
-              <Pressable style={st.pill} onPress={openCar} onLongPress={clearCar} accessibilityRole="button" accessibilityHint="Uzun basınca araç kaydı silinir">
-                <Text style={st.pillText}>Aracıma dön</Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Pressable style={st.pill} onPress={toggleAuto} accessibilityRole="switch" accessibilityState={{ checked: auto }} accessibilityLabel="Otomatik park algılama">
+                <Text style={st.pillText}>{auto ? "● Oto-park" : "Oto-park"}</Text>
               </Pressable>
-            )}
+              {car && (
+                <Pressable style={st.pill} onPress={openCar} onLongPress={clearCar} accessibilityRole="button" accessibilityHint="Uzun basınca araç kaydı silinir">
+                  <Text style={st.pillText}>Aracım</Text>
+                </Pressable>
+              )}
+            </View>
           </View>
           <View style={st.search}>
             <TextInput

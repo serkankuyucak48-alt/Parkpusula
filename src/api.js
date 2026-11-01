@@ -29,19 +29,21 @@ export async function loadSegments(at) {
   const ids = data.map((s) => s.id);
   const since60 = new Date(Date.now() - 60 * 86400e3).toISOString();
   const since24 = new Date(Date.now() - 24 * 3600e3).toISOString();
-  const [o, f, est] = await Promise.all([
+  const [o, f, est, pe] = await Promise.all([
     sb.from("pp_admin_occupancy").select("id,segment_id,occupancy_percent,observed_at,source")
       .gte("observed_at", since60).order("observed_at", { ascending: false }).limit(5000),
     sb.rpc("pp_feedback_recent", { p_ids: ids, p_since: since24 }),
     sb.rpc("pp_segment_estimates", at ? { p_at: new Date(at).toISOString() } : {}),
+    sb.rpc("pp_park_events_recent", { p_since: since24 }),
   ]);
   if (o.error) throw o.error;
   if (f.error) throw f.error;
-  const occ = o.data || [], fb = f.data || [], ed = (est && est.data) || [];
+  const occ = o.data || [], fb = f.data || [], ed = (est && est.data) || [], pev = (pe && pe.data) || [];
   for (const s of data) {
     s._occ = occ.filter((x) => x.segment_id === s.id);
     s._fb = fb.filter((x) => x.segment_id === s.id);
     s._est = ed.find((x) => x.segment_id === s.id);
+    s._pe = pev.filter((x) => x.segment_id === s.id);
   }
   return data;
 }

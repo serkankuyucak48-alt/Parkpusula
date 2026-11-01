@@ -3,7 +3,7 @@
     "name": "PARKPUSULA",
     "slug": "parkpusula",
     "scheme": "parkpusula",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -19,7 +19,11 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Yakınındaki sokakların park durumunu göstermek ve seni boş park yerine yönlendirmek için konumunu kullanıyoruz.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Park ettiğin ve ayrıldığın sokağı otomatik algılayıp, o sokaktaki park durumunu diğer sürücüler için güncellemek ve aracının yerini kaydetmek için konumunu arka planda kullanıyoruz. Konumun saklanmaz; yalnızca sokak ve saat kaydedilir. İstediğin zaman kapatabilirsin.",
+        "UIBackgroundModes": [
+          "location"
+        ]
       }
     },
     "android": {
@@ -29,19 +33,31 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2f7d6d"
       },
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "plugins": [
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Yakınındaki sokakların park durumunu göstermek ve seni boş park yerine yönlendirmek için konumunu kullanıyoruz."
+          "locationWhenInUsePermission": "Yakınındaki sokakların park durumunu göstermek ve seni boş park yerine yönlendirmek için konumunu kullanıyoruz.",
+          "locationAlwaysAndWhenInUsePermission": "Park ettiğin ve ayrıldığın sokağı otomatik algılayıp, o sokaktaki park durumunu diğer sürücüler için güncellemek ve aracının yerini kaydetmek için konumunu arka planda kullanıyoruz. Konumun saklanmaz; yalnızca sokak ve saat kaydedilir. İstediğin zaman kapatabilirsin.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [
         "expo-build-properties",
         {
-          "ios": { "deploymentTarget": "16.4" }
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
         }
       ]
     ]

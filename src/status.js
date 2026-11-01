@@ -33,6 +33,16 @@ export function statusOf(s, at, specialDays) {
     fbn++;
     if (!last || t > last) last = t;
   });
+  // Otomatik algılanan park / ayrılma olayları: "ayrıldı" = yer açıldı (güçlü, kısa ömürlü), "park etti" = zayıf doluluk sinyali
+  (s._pe || []).forEach((p) => {
+    const t = new Date(p.created_at), age = (now - t) / 60000;
+    if (age > 90 || age < -5) return;
+    const lf = p.kind === "leave";
+    const w = (lf ? 0.5 : 0.2) * Math.pow(0.5, age / (lf ? 12 : 20));
+    lw += w; lv += w * (lf ? 20 : 85);
+    fbn++;
+    if (!last || t > last) last = t;
+  });
   const e = s._est || {};
   let prior = null, pw = 0, ptxt = "";
   if (e.slot_n >= 2) {

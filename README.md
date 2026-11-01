@@ -14,6 +14,7 @@ Ankara Kızılay pilotu için sokak sokak park yeri doluluk uygulaması.
 - Uygulama içi navigasyon: rota çizgisi, yön oku, dönüş talimatları, Türkçe sesli yönlendirme, harita gidiş yönüne döner
 - Varışta "Park yeri buldun mu?" sorusu; "Yer yoktu" denirse sıradaki sokağa yönlendirme
 - Aracın park yeri kaydı ve yürüyerek dönüş tarifi
+- **Otomatik park algılama** (0.2, isteğe bağlı, "Oto-park" düğmesi): sürüş → durma → araçtan yürüyerek uzaklaşma "park", park edilen yerden tekrar sürüşe geçme "ayrılma" sayılır. Ayrılma, o sokakta yer açıldığını diğer sürücülere bildirir; araç yeri de kendiliğinden kaydedilir. Konum saklanmaz: sunucu noktayı en yakın sokak kesimine (25 m) eşler, yalnızca kesim + saat tutulur (`pp_park_events`). Kod: `src/autopark.js`
 
 ## Yol haritası
 
@@ -34,4 +35,11 @@ Bağımlılık sürümleri `scripts/install-deps.sh` içinde `npx expo install` 
 - `src/status.js` — doluluk ve tahmin hesabı
 - `src/nav.js` — rota ve Türkçe dönüş talimatları
 - `src/geo.js` — koordinat yardımcıları
+- `src/autopark.js` — arka planda park / ayrılma algılama
 - `codemagic.yaml` — iOS (TestFlight) ve Android (APK) derleme
+
+## App Store incelemesi notu (arka plan konumu)
+
+Apple "Her Zaman" konum iznini sorgular. İnceleme notuna şu metin yazılabilir:
+
+> Background location is used only when the user turns on "Oto-park" (automatic parking detection). It detects when the user parks and later leaves an on-street parking space, so the app can save the car's location and tell other drivers that a space has opened on that street. Raw location is never stored on our servers; it is matched to the nearest street segment and only the segment ID and time are recorded. The feature is off by default and can be turned off at any time.
