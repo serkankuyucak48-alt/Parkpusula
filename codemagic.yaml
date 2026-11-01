@@ -1,0 +1,68 @@
+# PARKPUSULA bulut derleme ayarları (Codemagic)
+# iOS: TestFlight'a gönderilir. Android: test için kurulabilir APK üretilir.
+workflows:
+  ios-testflight:
+    name: iOS TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    integrations:
+      # Codemagic'te Teams > Integrations > App Store Connect altına eklenen API anahtarının adı
+      app_store_connect: PARKPUSULA
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: tr.parkpusula.app
+      vars:
+        XCODE_WORKSPACE: "PARKPUSULA.xcworkspace"
+        XCODE_SCHEME: "PARKPUSULA"
+      node: 22
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Bağımlılıkları kur
+        script: bash scripts/install-deps.sh
+      - name: Expo prebuild (iOS)
+        script: npx expo prebuild --platform ios --clean --no-install
+      - name: CocoaPods
+        script: cd ios && pod install
+      - name: Kod imzalama profilleri
+        script: xcode-project use-profiles
+      - name: Derleme numarası
+        script: |
+          cd $CM_BUILD_DIR/ios
+          agvtool new-version -all $((${BUILD_NUMBER:-0} + 1))
+      - name: IPA derle
+        script: |
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/ios/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
+
+  android-apk:
+    name: Android test APK
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      node: 22
+      java: 17
+      # Codemagic'te Environment variables > grup adı "maps": ANDROID_MAPS_KEY değişkeni
+      groups:
+        - maps
+    scripts:
+      - name: Bağımlılıkları kur
+        script: bash scripts/install-deps.sh
+      - name: Expo prebuild (Android)
+        script: npx expo prebuild --platform android --clean --no-install
+      - name: Android SDK konumu
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: APK derle
+        script: cd android && ./gradlew assembleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.apk
